@@ -17,7 +17,8 @@ from config import Config
 from dataset import DatasetFromQuery
 from model import SRCNN, BNSRCNN
 from utils.logger import get_logger
-from utils.serializer import class_to_dict
+from utils.common import class_to_dict
+from validation import psnr_score, Set5Validation
 
 logger = get_logger(__name__, output_file=os.path.join(Config.checkpoints_path, 'log.txt'))
 
@@ -46,10 +47,6 @@ def get_lr(optimizer):
         return param_group['lr']
 
 
-def psnr_score(mse_loss):
-    return 10 * np.log10(1 / mse_loss)
-
-
 def calculate_metrics(output, label) -> dict:
     data = {}
     mse_loss = nn.MSELoss()(output, label).item()
@@ -66,10 +63,6 @@ if __name__ == '__main__':
                                    batch_size=opt.train_batch_size,
                                    shuffle=True,
                                    num_workers=opt.num_workers)
-    valid_loader = data.DataLoader(DATASETS.get(Config.valid_dataset),
-                                   batch_size=opt.valid_batch_size,
-                                   shuffle=False,
-                                   num_workers=opt.num_workers)
 
     logger.info('{} train iters per epoch:'.format(len(train_loader)))
     model = MODELS.get(Config.model, None)()
@@ -83,6 +76,7 @@ if __name__ == '__main__':
                                     nesterov=True)
     elif Config.optimizer == 'adabound':
         optimizer = AdaBound(params=params,
+                             weight_decay=opt.weight_decay,
                              lr=opt.lr,
                              final_lr=opt.final_lr,
                              amsbound=opt.amsbound)
@@ -101,6 +95,10 @@ if __name__ == '__main__':
                              model=model,
                              output=os.path.join(Config.checkpoints_path, 'Set5'))
     ])
+
+    validations = [
+        Set5Validation(dirpath=os.path.join(environments.DATASET_DIR, 'Set5'))
+    ]
 
     if environments.SLACK_INCOMING_URL and not Config.is_debug:
         logger.info('Add Slack Notification')
@@ -140,14 +138,10 @@ if __name__ == '__main__':
                 save_model(model, opt.checkpoints_path, 'generator', epoch)
 
             model.eval()
-            valid_metrics = defaultdict(float)
-
-            for x, y in valid_loader:
-                x, y = x.to(device), y.to(device)
-                output = model(x)
-                loss = criterion(output, y).item()
-                valid_metrics['loss'] += loss / len(x)
-                valid_metrics['psnr_loss'] += psnr_score(loss) / len(x)
+            valid_metrics = {}
+            for v in validations:
+                m = v.call(model)
+                valid_metrics.update(m)
 
             callback_manager.on_epoch_end(epoch, valid_metric=valid_metrics)
 

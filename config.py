@@ -56,17 +56,19 @@ class Config(object):
     optimizer = args.get('optimizer', None)
     num_workers = 4  # how many workers for loading data
 
-    max_epoch = 100
+    max_epoch = 50
     lr = args.get('lr', 0.1)  # initial learning rate
-    lr_step = 20  # cut lr frequency
+    lr_step = 10  # cut lr frequency
     weight_decay = args.get('decay')
 
     # use in adabound
     final_lr = args.get('final_lr', .2)
     amsbound = True
 
-    checkpoints_path = os.path.join(environments.DATASET_DIR, 'checkpoints', f'{dataset}_{model}_{optimizer}_{lr}_{now}')
+    checkpoints_path = os.path.join(environments.DATASET_DIR, 'checkpoints',
+                                    f'{dataset}_{model}_{optimizer}_lr={lr:.1e}_final={final_lr:.1e}_{now}')
     config_path = os.path.join(checkpoints_path, 'train_config.json')
 
 
+print(Config.checkpoints_path)
 os.makedirs(Config.checkpoints_path, exist_ok=True)

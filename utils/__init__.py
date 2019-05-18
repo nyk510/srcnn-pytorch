@@ -1,1 +1,1 @@
-from .serializer import class_to_dict
+from .common import class_to_dict

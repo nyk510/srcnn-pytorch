@@ -1,10 +1,7 @@
 import torch
 from PIL import Image
 from torchvision import transforms as T
-
-
-def get_model_device(model):
-    return next(model.parameters()).device
+from utils.common import get_model_device
 
 
 def make_reconstruction_image(model, img, shrink_ratio=.5, interpolation=Image.BICUBIC):
