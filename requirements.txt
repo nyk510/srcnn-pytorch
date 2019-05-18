@@ -1,0 +1,6 @@
+graphviz
+visdom
+tensorboardX
+tensorflow
+adabound
+mxnet-cu100
