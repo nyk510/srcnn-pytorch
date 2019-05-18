@@ -97,9 +97,9 @@ if __name__ == '__main__':
                              output=os.path.join(Config.checkpoints_path, 'Set5'))
     ])
 
-    if environments.SLACK_INCOMMING_URL and not Config.is_debug:
+    if environments.SLACK_INCOMING_URL and not Config.is_debug:
         logger.info('Add Slack Notification')
-        callback_manager.callbacks.append(SlackNotifyCallback(url=environments.SLACK_INCOMMING_URL, config=Config))
+        callback_manager.callbacks.append(SlackNotifyCallback(url=environments.SLACK_INCOMING_URL, config=Config))
 
     with open(Config.config_path, 'w') as f:
         data = class_to_dict(Config)

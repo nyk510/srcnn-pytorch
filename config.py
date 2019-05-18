@@ -16,7 +16,7 @@ def get_arguments():
                             description=__doc__)
 
     parser.add_argument('--debug', action='store_true',
-                        help='If add it, run with debugging mode (not record and stop one batch per epoch')
+                        help='If add it, run with debugging mode (no record and stop one batch per epoch')
     # model setting
     parser.add_argument('--dataset', type=str, default='91', help='dataset name')
     parser.add_argument('--valid', type=str, default='Set5', help='validation dataset name')

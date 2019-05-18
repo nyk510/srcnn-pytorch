@@ -39,7 +39,7 @@ docker exec -it srcnn-pytorch bash
 ## `.env` Setting
 
 * `DATASET_DIR`: Path to Dataset directory on your local PC
-* `SLACK_INCOMMING_URL`: slack incoming url. If Set, post learning log to your slack channel.
+* `SLACK_INCOMING_URL`: slack incoming url. If Set, post learning log to your slack channel.
 
 ## データセットの準備
 
