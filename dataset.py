@@ -10,10 +10,12 @@ class DatasetFromQuery(data.Dataset):
                  query,
                  size=64,
                  min_size=32,
-                 inflation=1000,
+                 total_samples=100000,
                  interpolation=Image.BICUBIC):
         super(DatasetFromQuery, self).__init__()
-        self.img_paths = list(glob(query)) * inflation
+        self.img_paths = list(glob(query))
+        self.total_samples = total_samples
+        self.n_images = len(self.img_paths)
 
         self.input_transform = T.Compose([
             T.Resize(size=min_size),
@@ -30,10 +32,10 @@ class DatasetFromQuery(data.Dataset):
         ])
 
     def __len__(self):
-        return len(self.img_paths)
+        return self.total_samples
 
     def __getitem__(self, i):
-        img = Image.open(self.img_paths[i])
+        img = Image.open(self.img_paths[i % self.n_images])
         img = self.preprocess(img)
         target = img.copy()
 
