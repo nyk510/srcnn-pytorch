@@ -18,6 +18,9 @@ def get_arguments():
     parser.add_argument('--debug', action='store_true',
                         help='If add it, run with debugging mode (no record and stop one batch per epoch')
     # model setting
+    parser.add_argument('--model', type=str, default='srcnn', help='model architecture name')
+
+    # dataset setting
     parser.add_argument('--dataset', type=str, default='91', help='dataset name')
     parser.add_argument('--valid', type=str, default='Set5', help='validation dataset name')
 
@@ -41,6 +44,8 @@ class Config(object):
     now = get_time_string()
 
     is_debug = args.get('debug', False)
+
+    model = args.get('model', None)
     dataset = args.get('dataset', None)
     valid_dataset = args.get('valid', None)
 
@@ -49,7 +54,7 @@ class Config(object):
     valid_batch_size = 64
     # optimizer name: `"adam"`, `"sgd"`, `"adabound"`
     optimizer = args.get('optimizer', None)
-    num_workers = 8  # how many workers for loading data
+    num_workers = 4  # how many workers for loading data
 
     max_epoch = 100
     lr = args.get('lr', 0.1)  # initial learning rate
@@ -60,7 +65,7 @@ class Config(object):
     final_lr = args.get('final_lr', .2)
     amsbound = True
 
-    checkpoints_path = os.path.join(environments.DATASET_DIR, 'checkpoints', f'{dataset}_{optimizer}_{now}')
+    checkpoints_path = os.path.join(environments.DATASET_DIR, 'checkpoints', f'{dataset}_{model}_{optimizer}_{lr}_{now}')
     config_path = os.path.join(checkpoints_path, 'train_config.json')
 
 

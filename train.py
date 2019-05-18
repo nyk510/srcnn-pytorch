@@ -15,7 +15,7 @@ import environments
 from callback import TensorboardLogger, LoggingCallback, CallbackManager, SlackNotifyCallback, TestGenerateCallback
 from config import Config
 from dataset import DatasetFromQuery
-from model import Generator
+from model import SRCNN, BNSRCNN
 from utils.logger import get_logger
 from utils.serializer import class_to_dict
 
@@ -24,6 +24,11 @@ logger = get_logger(__name__, output_file=os.path.join(Config.checkpoints_path, 
 DATASETS = {
     '91': DatasetFromQuery(query=os.path.join(environments.DATASET_DIR, 'train_91/*.bmp')),
     'Set5': DatasetFromQuery(query=os.path.join(environments.DATASET_DIR, 'Set5/*.bmp'))
+}
+
+MODELS = {
+    'srcnn': SRCNN,
+    'bnsrcnn': BNSRCNN
 }
 
 
@@ -67,7 +72,7 @@ if __name__ == '__main__':
                                    num_workers=opt.num_workers)
 
     logger.info('{} train iters per epoch:'.format(len(train_loader)))
-    model = Generator()
+    model = MODELS.get(Config.model, None)()
     logger.info(model)
     model.to(device)
     criterion = nn.MSELoss()
