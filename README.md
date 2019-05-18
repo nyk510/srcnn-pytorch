@@ -32,11 +32,11 @@ docker-compose build
 docker-compose up -d
 
 # コードの実行は container 内部でね
-docker exec -it arc-face-pytorch bash
-# or docker exec -it arc-face-pytorch zsh
+docker exec -it srcnn-pytorch bash
+# or docker exec -it srcnn-pytorch zsh
 ```
 
-## Env Setting
+## `.env` Setting
 
 * `DATASET_DIR`: Path to Dataset directory on your local PC
 * `SLACK_INCOMMING_URL`: slack incoming url. If Set, post learning log to your slack channel.
