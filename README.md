@@ -2,6 +2,18 @@
 
 SRCNN Implementation with pytorch
 
+## Result
+
+train on 91 images and validate on `SET5` image. `BICUBIC` > `SRCNN output` > `Original Image`
+
+> Butterfly
+
+![](./notebooks/clipped_2.png)
+
+> baby
+
+![](./notebooks/clipped_3.png)
+
 ## Requierments
 
 * docker
