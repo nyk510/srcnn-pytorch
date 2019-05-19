@@ -54,6 +54,36 @@ def calculate_metrics(output, label) -> dict:
     return data
 
 
+class ClopTensor:
+    def __init__(self, center=(32, 32), size=40):
+        self.center = center
+        self.size = size
+
+        self.left = int(center[0] - size / 2)
+        self.right = self.left + size
+        self.top = int(center[1] - size / 2)
+        self.bottom = self.left + size
+
+    def call(self, x):
+        return x[:, :, self.left:self.right, self.top:self.bottom]
+
+
+class ClopLoss:
+    def __init__(self):
+        self.clipping = ClopTensor()
+        self.loss = nn.MSELoss()
+
+    def __call__(self, x, y):
+        x = self.clipping.call(x)
+        y = self.clipping.call(y)
+        return self.loss(x, y)
+
+
+LOSSES = {
+    'mse': nn.MSELoss(),
+    'mse-clop': ClopLoss()
+}
+
 if __name__ == '__main__':
 
     opt = Config()
@@ -68,7 +98,8 @@ if __name__ == '__main__':
     model = MODELS.get(Config.model, None)()
     logger.info(model)
     model.to(device)
-    criterion = nn.MSELoss()
+    criterion = LOSSES.get(Config.loss, None)
+
     params = [{'params': model.parameters()}]
     if Config.optimizer == 'sgd':
         optimizer = torch.optim.SGD(params,

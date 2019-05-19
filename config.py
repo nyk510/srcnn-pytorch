@@ -19,6 +19,7 @@ def get_arguments():
                         help='If add it, run with debugging mode (no record and stop one batch per epoch')
     # model setting
     parser.add_argument('--model', type=str, default='srcnn', help='model architecture name')
+    parser.add_argument('--loss', type=str, default='mse', help='Loss function', choices=['mse', 'mse-clop'])
 
     # dataset setting
     parser.add_argument('--dataset', type=str, default='91', help='dataset name')
@@ -46,6 +47,7 @@ class Config(object):
     is_debug = args.get('debug', False)
 
     model = args.get('model', None)
+    loss = args.get('loss', None)
     dataset = args.get('dataset', None)
     valid_dataset = args.get('valid', None)
 
@@ -56,7 +58,7 @@ class Config(object):
     optimizer = args.get('optimizer', None)
     num_workers = 4  # how many workers for loading data
 
-    max_epoch = 50
+    max_epoch = 30
     lr = args.get('lr', 0.1)  # initial learning rate
     lr_step = 10  # cut lr frequency
     weight_decay = args.get('decay')
@@ -66,7 +68,7 @@ class Config(object):
     amsbound = True
 
     checkpoints_path = os.path.join(environments.DATASET_DIR, 'checkpoints',
-                                    f'{dataset}_{model}_{optimizer}_lr={lr:.1e}_final={final_lr:.1e}_{now}')
+                                    f'{dataset}_{model}_{loss}_{optimizer}_lr={lr:.1e}_final={final_lr:.1e}_{now}')
     config_path = os.path.join(checkpoints_path, 'train_config.json')
 
 
