@@ -1,6 +1,6 @@
 # SRCNN Pytorch
 
-SRCNN Implementation with pytorch
+SRCNN Implementation using pytorch 🎉
 
 ## Result
 
