@@ -8,27 +8,39 @@ from torchvision import transforms as T
 class DatasetFromQuery(data.Dataset):
     def __init__(self,
                  query,
-                 size=64,
-                 min_size=32,
+                 min_size=128,
+                 shrink_scale=2,
                  total_samples=100000,
+                 only_luminance=False,
+                 input_upsample=True,
                  interpolation=Image.BICUBIC):
+
+        min_size = min_size
+        high_size = min_size * shrink_scale
         super(DatasetFromQuery, self).__init__()
         self.img_paths = list(glob(query))
+        self.only_luminance = only_luminance
         self.total_samples = total_samples
         self.n_images = len(self.img_paths)
 
-        self.input_transform = T.Compose([
-            T.Resize(size=min_size),
-            T.Resize(size=size, interpolation=interpolation),
-            T.ToTensor()
-        ])
+        if input_upsample:
+            self.input_transform = T.Compose([
+                T.Resize(size=min_size),
+                T.Resize(size=high_size, interpolation=interpolation),
+                T.ToTensor()
+            ])
+        else:
+            self.input_transform = T.Compose([
+                T.Resize(size=min_size),
+                T.ToTensor()
+            ])
+
         self.target_transform = T.Compose([
             T.ToTensor()
         ])
 
         self.preprocess = T.Compose([
-            T.RandomRotation(degrees=90),
-            T.RandomCrop(size=size)
+            T.RandomCrop(size=high_size)
         ])
 
     def __len__(self):
@@ -36,6 +48,9 @@ class DatasetFromQuery(data.Dataset):
 
     def __getitem__(self, i):
         img = Image.open(self.img_paths[i % self.n_images])
+        if self.only_luminance:
+            img, _, _ = img.convert('YCbCr').split()
+
         img = self.preprocess(img)
         target = img.copy()
 

@@ -6,10 +6,16 @@ from utils.common import get_model_device
 from torch import nn
 import numpy as np
 import torch
+from model import ESPCN, generate_high_img
+
 
 def psnr_score(mse_loss):
     return 10 * np.log10(1 / mse_loss)
 
+
+def calculate_valid_crop_size(crop_size, upscale_factor):
+    x = crop_size - (crop_size % upscale_factor)
+    return x, int(x / upscale_factor)
 
 class AbstractValidation:
     name = None
@@ -63,14 +69,21 @@ class Set5Validation(AbstractValidation):
 
         losses = []
         for origin, low in self.iter_images():
-            t, x = converter(origin), converter(low)
+
+            t = converter(origin)
             with torch.no_grad():
-                y = model(x)
+                if isinstance(model, ESPCN):
+                    low = origin.resize([int(i / model.upscale) for i in low.size])
+                    y = generate_high_img(model, low_img=low, as_tensor=True, device=device)
+                else:
+                    x = converter(low)
+                    y = model(x)
+                print(y.shape, t.shape)
                 loss = self.mse_loss(t, y)
             losses.append(loss.item())
+        losses = np.array(losses)
 
         metrics = {}
-        loss = np.mean(losses)
-        metrics['mse'] = loss
-        metrics['psnr'] = psnr_score(loss)
+        metrics['mse'] = losses.mean()
+        metrics['psnr'] = psnr_score(losses).mean()
         return metrics

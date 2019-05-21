@@ -15,22 +15,12 @@ import environments
 from callback import TensorboardLogger, LoggingCallback, CallbackManager, SlackNotifyCallback, TestGenerateCallback
 from config import Config
 from dataset import DatasetFromQuery
-from model import SRCNN, BNSRCNN
+from model import get_network
 from utils.logger import get_logger
 from utils.common import class_to_dict
 from validation import psnr_score, Set5Validation
 
 logger = get_logger(__name__, output_file=os.path.join(Config.checkpoints_path, 'log.txt'))
-
-DATASETS = {
-    '91': DatasetFromQuery(query=os.path.join(environments.DATASET_DIR, 'train_91/*.bmp')),
-    'Set5': DatasetFromQuery(query=os.path.join(environments.DATASET_DIR, 'Set5/*.bmp'))
-}
-
-MODELS = {
-    'srcnn': SRCNN,
-    'bnsrcnn': BNSRCNN
-}
 
 
 def save_model(model, save_path, name, iter_cnt):
@@ -88,22 +78,34 @@ if __name__ == '__main__':
 
     opt = Config()
     device = torch.device("cuda")
+    dataset_queries = {
+        '91': os.path.join(environments.DATASET_DIR, 'train_91/*.bmp'),
+        'Set5': os.path.join(environments.DATASET_DIR, 'Set5/*.bmp'),
+        'bsds': os.path.join(environments.DATASET_DIR, 'BSDS300/images/train/*.jpg')
+    }
 
-    train_loader = data.DataLoader(DATASETS.get(Config.dataset, None),
+    model = get_network(Config.model)()
+    logger.info(model)
+    model.to(device)
+    criterion = LOSSES.get(Config.loss, None)
+
+    query = dataset_queries.get(Config.dataset)
+    dataset = DatasetFromQuery(query=query,
+                               input_upsample=model.input_upscale,
+                               only_luminance=model.only_luminance)
+    train_loader = data.DataLoader(dataset,
                                    batch_size=opt.train_batch_size,
                                    shuffle=True,
                                    num_workers=opt.num_workers)
 
     logger.info('{} train iters per epoch:'.format(len(train_loader)))
-    model = MODELS.get(Config.model, None)()
-    logger.info(model)
-    model.to(device)
-    criterion = LOSSES.get(Config.loss, None)
 
     params = [{'params': model.parameters()}]
     if Config.optimizer == 'sgd':
         optimizer = torch.optim.SGD(params,
-                                    lr=opt.lr, weight_decay=opt.weight_decay, momentum=.9,
+                                    lr=opt.lr,
+                                    weight_decay=opt.weight_decay,
+                                    momentum=.9,
                                     nesterov=True)
     elif Config.optimizer == 'adabound':
         optimizer = AdaBound(params=params,
@@ -122,9 +124,9 @@ if __name__ == '__main__':
     callback_manager = CallbackManager([
         TensorboardLogger(log_dir=Config.checkpoints_path),
         LoggingCallback(),
-        TestGenerateCallback(query=os.path.join(environments.DATASET_DIR, 'Set5/*.bmp'),
-                             model=model,
-                             output=os.path.join(Config.checkpoints_path, 'Set5'))
+        # TestGenerateCallback(query=os.path.join(environments.DATASET_DIR, 'Set5/*.bmp'),
+        #                      model=model,
+        #                      output=os.path.join(Config.checkpoints_path, 'Set5'))
     ])
 
     validations = [
