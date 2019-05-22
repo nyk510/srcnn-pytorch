@@ -1,12 +1,14 @@
-from torchvision import transforms as T
-from glob import glob
 import os
-from PIL import Image
-from utils.common import get_model_device, calculate_original_img_size
-from torch import nn
+from glob import glob
+
 import numpy as np
 import torch
+from PIL import Image
+from torch import nn
+from torchvision import transforms as T
+
 from model import ESPCN, generate_high_img
+from utils.common import get_model_device, calculate_original_img_size
 
 
 def psnr_score(mse_loss):
@@ -81,8 +83,7 @@ class Set5Validation(AbstractValidation):
             return x
 
         losses = []
-        for origin, low in self.img_set_list:
-
+        for name, (origin, low) in zip(self.original_imgs, self.img_set_list):
             t = converter(origin)
             with torch.no_grad():
                 if isinstance(model, ESPCN):
@@ -91,9 +92,10 @@ class Set5Validation(AbstractValidation):
                     low = low.resize(origin.size, Image.BICUBIC)
                     x = converter(low)
                     y = model(x)
-                print(y.shape, t.shape)
-                loss = self.mse_loss(t, y)
-            losses.append(loss.item())
+                loss = self.mse_loss(t, y).item()
+
+            print(f'{name}\t{loss:.3f}\t{psnr_score(loss):.3f}')
+            losses.append(loss)
         losses = np.array(losses)
 
         metrics = {}
