@@ -3,7 +3,13 @@ from glob import glob
 from PIL import Image
 from torch.utils import data
 from torchvision import transforms as T
+
 from utils.common import calculate_original_img_size
+
+
+def get_luminance(img):
+    x, _, _ = img.convert('YCbCr').split()
+    return x
 
 
 class DatasetFromQuery(data.Dataset):
@@ -43,6 +49,9 @@ class DatasetFromQuery(data.Dataset):
         high_size = calculate_original_img_size(max_size, upscale_factor=shrink_scale)
         low_size = int(high_size / shrink_scale)
 
+        self.low_size = low_size
+        self.high_size = high_size
+
         super(DatasetFromQuery, self).__init__()
         self.img_paths = list(glob(query))
         self.only_luminance = only_luminance
@@ -53,25 +62,21 @@ class DatasetFromQuery(data.Dataset):
             self.total_samples = len(self.img_paths)
 
         self.n_images = len(self.img_paths)
+        self.to_tensor = T.ToTensor()
 
         if input_upsample:
             self.input_transform = T.Compose([
                 T.Resize(size=low_size),
                 T.Resize(size=high_size, interpolation=interpolation),
-                T.ToTensor()
             ])
         else:
             self.input_transform = T.Compose([
-                T.Resize(size=low_size),
-                T.ToTensor()
+                T.Resize(size=low_size, interpolation=interpolation),
             ])
 
-        self.target_transform = T.Compose([
-            T.ToTensor()
-        ])
-
         self.preprocess = T.Compose([
-            T.RandomCrop(size=high_size)
+            T.RandomCrop(size=high_size),
+            T.RandomHorizontalFlip()
         ])
 
     def __len__(self):
@@ -79,12 +84,12 @@ class DatasetFromQuery(data.Dataset):
 
     def __getitem__(self, i):
         img = Image.open(self.img_paths[i % self.n_images])
-        if self.only_luminance:
-            img, _, _ = img.convert('YCbCr').split()
-
         img = self.preprocess(img)
         img_target = img.copy()
-
         img_input = self.input_transform(img)
-        img_target = self.target_transform(img_target)
-        return img_input, img_target
+
+        if self.only_luminance:
+            img_input = get_luminance(img_input)
+            img_target = get_luminance(img_target)
+
+        return self.to_tensor(img_input), self.to_tensor(img_target)
