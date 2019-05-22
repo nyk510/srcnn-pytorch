@@ -39,15 +39,19 @@ class AbstractCallback:
 
 
 class TensorboardLogger(AbstractCallback):
+    """
+    Tensorboard への log の記録 + csv で epoch ごとの値を保存する callback
+    """
+
     def __init__(self, log_dir=None):
         os.makedirs(log_dir, exist_ok=True)
         self.writer = SummaryWriter(log_dir=log_dir)
         self.current_epoch = -1
-        self.history = []
-        self.epoch_score_df = pd.DataFrame()
+        self.history_df = pd.DataFrame()
 
     def on_epoch_start(self, epoch):
         self.current_epoch = epoch
+        self.epoch_score_df = pd.DataFrame()
 
     def on_batch_end(self, loss, n_batch, train_metric: dict):
         df_i = pd.DataFrame([train_metric])
@@ -58,8 +62,7 @@ class TensorboardLogger(AbstractCallback):
         self.epoch_score_df = pd.concat([self.epoch_score_df, df_i], ignore_index=True)
 
     def on_epoch_end(self, epoch, valid_metric: dict):
-        df = self.epoch_score_df[self.epoch_score_df['epoch'] == self.current_epoch]
-        df = df.drop(columns=['epoch', 'n_batch'])
+        df = self.epoch_score_df.drop(columns=['epoch', 'n_batch'])
         train_metric = df.mean().to_dict()
 
         for k, v in train_metric.items():
@@ -67,7 +70,13 @@ class TensorboardLogger(AbstractCallback):
         for k, v in valid_metric.items():
             self.writer.add_scalar(f'valid_{k}', scalar_value=v, global_step=epoch)
 
-        self.epoch_score_df.to_csv(os.path.join(self.writer.log_dir, 'train_log.csv'), index=False)
+        data = self.epoch_score_df.mean()
+        data = data.add_prefix('train_')
+        for k, v in valid_metric.items():
+            data[f'valid_{k}'] = v
+
+        self.history_df = self.history_df.append(data, ignore_index=True)
+        self.history_df.to_csv(os.path.join(self.writer.log_dir, 'train_log.csv'), index=False)
 
 
 def get_str_from_dict(d):
