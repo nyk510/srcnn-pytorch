@@ -2,7 +2,7 @@ from torchvision import transforms as T
 from glob import glob
 import os
 from PIL import Image
-from utils.common import get_model_device
+from utils.common import get_model_device, calculate_original_img_size
 from torch import nn
 import numpy as np
 import torch
@@ -16,6 +16,7 @@ def psnr_score(mse_loss):
 def calculate_valid_crop_size(crop_size, upscale_factor):
     x = crop_size - (crop_size % upscale_factor)
     return x, int(x / upscale_factor)
+
 
 class AbstractValidation:
     name = None
@@ -32,30 +33,42 @@ class AbstractValidation:
 
 
 class Set5Validation(AbstractValidation):
+    """
+    Validation on Set5 Dataset
+
+    original imgs の glob さえ書き換えればどんなデータセットでも行けるので
+    Image Validation みたいな汎用クラスにまとめたい
+    """
+
     name = 'set5'
 
-    def __init__(self, dirpath, shrink_ratio=2):
+    def __init__(self, dirpath, upscale=2):
         self.dirpath = dirpath
-        self.low_dirname = f'lowx{shrink_ratio}'
+        self.dirname = f'scalex{upscale}'
+        self.img_dir = os.path.join(dirpath, self.dirname)
+
+        self.upscale = upscale
+        self.img_set_list = []
 
         self.original_imgs = glob(os.path.join(dirpath, '*.bmp'))
-        self.low_imgs = glob(os.path.join(dirpath, self.low_dirname, '*.bmp'))
         assert len(self.original_imgs) > 0
-        assert len(self.low_imgs) > 0
+
         self.mse_loss = nn.MSELoss()
+        self.make_low_and_hig_resolution_images()
 
-    def get_low_img(self, name):
-        for p in self.low_imgs:
-            if name in p:
-                return p
-        return None
+    def make_low_and_hig_resolution_images(self):
+        os.makedirs(self.img_dir, exist_ok=True)
+        for p in self.original_imgs:
+            name = os.path.basename(p)
+            img = Image.open(p)
+            high_size = [calculate_original_img_size(i, self.upscale) for i in img.size]
+            low_size = [int(i / self.upscale) for i in high_size]
+            high_img = img.crop((0, 0, *high_size))
+            low_img = high_img.resize(low_size, Image.BICUBIC)
+            high_img.save(os.path.join(self.img_dir, f'high_{name}'))
+            low_img.save(os.path.join(self.img_dir, f'low_{name}'))
 
-    def iter_images(self):
-        for origin in self.original_imgs:
-            origin_img = Image.open(origin)
-            name = os.path.basename(origin)
-            low_img = Image.open(self.get_low_img(name))
-            yield origin_img, low_img
+            self.img_set_list.append([high_img, low_img])
 
     def call_core(self, model):
         model.eval()
@@ -68,14 +81,14 @@ class Set5Validation(AbstractValidation):
             return x
 
         losses = []
-        for origin, low in self.iter_images():
+        for origin, low in self.img_set_list:
 
             t = converter(origin)
             with torch.no_grad():
                 if isinstance(model, ESPCN):
-                    low = origin.resize([int(i / model.upscale) for i in low.size])
                     y = generate_high_img(model, low_img=low, as_tensor=True, device=device)
                 else:
+                    low = low.resize(origin.size, Image.BICUBIC)
                     x = converter(low)
                     y = model(x)
                 print(y.shape, t.shape)
