@@ -1,4 +1,5 @@
 from torch import nn
+import torch.nn.functional as F
 import torchvision.transforms as T
 from PIL import Image
 import torch
@@ -63,8 +64,6 @@ class ESPCN(AbstractNet):
         self.conv4 = nn.Conv2d(32, upscale ** 2, kernel_size=3, stride=1, padding=1)
         self.pixel_shuffle = nn.PixelShuffle(self.upscale)
 
-        self.relu = nn.ReLU()
-
     def _initialize_weights(self):
         weights_with_relu = [
             self.conv1.weight,
@@ -78,9 +77,9 @@ class ESPCN(AbstractNet):
         nn.init.orthogonal_(self.conv4.weight)
 
     def forward(self, x):
-        h = self.relu(self.conv1(x))
-        h = self.relu(self.conv2(h))
-        h = self.relu(self.conv3(h))
+        h = F.tanh(self.conv1(x))
+        h = F.tanh(self.conv2(h))
+        h = F.tanh(self.conv3(h))
         return self.pixel_shuffle(self.conv4(h))
 
 
