@@ -18,7 +18,7 @@ from dataset import DatasetFromQuery
 from model import get_network
 from utils.logger import get_logger
 from utils.common import class_to_dict
-from validation import psnr_score, Set5Validation
+from validation import psnr_score, ImageValidation
 
 logger = get_logger(__name__, output_file=os.path.join(Config.checkpoints_path, 'log.txt'))
 
@@ -84,13 +84,14 @@ if __name__ == '__main__':
         'bsds': os.path.join(environments.DATASET_DIR, 'BSDS300/images/train/*.jpg')
     }
 
-    model = get_network(Config.model)()
+    model = get_network(Config.model)(upscale=Config.upscale)
     logger.info(model)
     model.to(device)
     criterion = LOSSES.get(Config.loss, None)
 
     query = dataset_queries.get(Config.dataset)
     dataset = DatasetFromQuery(query=query,
+                               shrink_scale=model.upscale,
                                input_upsample=model.input_upscale,
                                only_luminance=model.only_luminance)
     train_loader = data.DataLoader(dataset,
@@ -124,13 +125,10 @@ if __name__ == '__main__':
     callback_manager = CallbackManager([
         TensorboardLogger(log_dir=Config.checkpoints_path),
         LoggingCallback(),
-        # TestGenerateCallback(query=os.path.join(environments.DATASET_DIR, 'Set5/*.bmp'),
-        #                      model=model,
-        #                      output=os.path.join(Config.checkpoints_path, 'Set5'))
     ])
 
     validations = [
-        Set5Validation(dirpath=os.path.join(environments.DATASET_DIR, 'Set5'))
+        ImageValidation(name='Set5', upscale=Config.upscale)
     ]
 
     if environments.SLACK_INCOMING_URL and not Config.is_debug:
