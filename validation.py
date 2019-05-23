@@ -9,6 +9,7 @@ from torchvision import transforms as T
 
 from model import ESPCN, generate_high_img
 from utils.common import get_model_device, calculate_original_img_size
+from environments import DATASET_DIR
 
 
 def psnr_score(mse_loss):
@@ -34,7 +35,7 @@ class AbstractValidation:
         return m
 
 
-class Set5Validation(AbstractValidation):
+class ImageValidation(AbstractValidation):
     """
     Validation on Set5 Dataset
 
@@ -42,17 +43,17 @@ class Set5Validation(AbstractValidation):
     Image Validation みたいな汎用クラスにまとめたい
     """
 
-    name = 'set5'
+    def __init__(self, name, upscale=2):
+        self.dirpath = os.path.join(DATASET_DIR, name)
+        self.name = name
 
-    def __init__(self, dirpath, upscale=2):
-        self.dirpath = dirpath
         self.dirname = f'scalex{upscale}'
-        self.img_dir = os.path.join(dirpath, self.dirname)
+        self.img_dir = os.path.join(self.dirpath, self.dirname)
 
         self.upscale = upscale
         self.img_set_list = []
 
-        self.original_imgs = glob(os.path.join(dirpath, '*.bmp'))
+        self.original_imgs = glob(os.path.join(self.dirpath, '*.bmp'))
         assert len(self.original_imgs) > 0
 
         self.mse_loss = nn.MSELoss()

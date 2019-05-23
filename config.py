@@ -19,6 +19,7 @@ def get_arguments():
                         help='If add it, run with debugging mode (no record and stop one batch per epoch')
     # model setting
     parser.add_argument('--model', type=str, default='srcnn', help='model architecture name')
+    parser.add_argument('--upscale', type=int, default=2, help='upscale factor')
     parser.add_argument('--loss', type=str, default='mse', help='Loss function', choices=['mse', 'mse-clop'])
 
     # dataset setting
@@ -33,6 +34,7 @@ def get_arguments():
                         help='final learning rate (only activa on `optimizer="adabound"`')
 
     # run settings
+    parser.add_argument('--workers', type=int, default=4, help='workers for dataset parallel')
     parser.add_argument('--batch', type=int, default=128, help='training batch size')
     return vars(parser.parse_args())
 
@@ -46,6 +48,7 @@ class Config(object):
 
     is_debug = args.get('debug', False)
 
+    upscale = args.get('upscale')
     model = args.get('model', None)
     loss = args.get('loss', None)
     dataset = args.get('dataset', None)
@@ -56,11 +59,11 @@ class Config(object):
     valid_batch_size = 64
     # optimizer name: `"adam"`, `"sgd"`, `"adabound"`
     optimizer = args.get('optimizer', None)
-    num_workers = 4  # how many workers for loading data
+    num_workers = args.get('workers', 1)
 
-    max_epoch = 30
+    max_epoch = 45
     lr = args.get('lr', 0.1)  # initial learning rate
-    lr_step = 10  # cut lr frequency
+    lr_step = 15  # cut lr frequency
     weight_decay = args.get('decay')
 
     # use in adabound
@@ -68,7 +71,7 @@ class Config(object):
     amsbound = True
 
     checkpoints_path = os.path.join(environments.DATASET_DIR, 'checkpoints',
-                                    f'{dataset}_{model}_{loss}_{optimizer}_lr={lr:.1e}_final={final_lr:.1e}_{now}')
+                                    f'{dataset}_{model}x{upscale}_{loss}_{optimizer}_lr={lr:.1e}_final={final_lr:.1e}_{now}')
     config_path = os.path.join(checkpoints_path, 'train_config.json')
 
 
